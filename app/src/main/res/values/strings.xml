@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">Anroid-OCR</string>
+    <string name="stop_rec">❚❚</string>
 </resources>

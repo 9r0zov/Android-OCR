@@ -3,6 +3,7 @@ package tech.mustache.ocr.com.anroid_ocr.ui.activity;
 import android.Manifest;
 import android.content.Context;
 import android.content.pm.PackageManager;
+import android.graphics.ImageFormat;
 import android.graphics.SurfaceTexture;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCaptureSession;
@@ -10,7 +11,11 @@ import android.hardware.camera2.CameraCharacteristics;
 import android.hardware.camera2.CameraDevice;
 import android.hardware.camera2.CameraManager;
 import android.hardware.camera2.CaptureRequest;
+import android.hardware.camera2.TotalCaptureResult;
 import android.hardware.camera2.params.StreamConfigurationMap;
+import android.media.Image;
+import android.media.ImageReader;
+import android.media.MediaRecorder;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -19,22 +24,20 @@ import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
+import android.util.Range;
 import android.util.Size;
 import android.view.Surface;
 import android.view.TextureView;
 import android.view.View;
-import android.widget.Button;
+import android.widget.ImageButton;
 import android.widget.Toast;
 
-import java.util.ArrayList;
+import java.io.IOException;
+import java.lang.reflect.Array;
 import java.util.Arrays;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
 
 import tech.mustache.ocr.com.anroid_ocr.R;
 import tech.mustache.ocr.com.anroid_ocr.util.ScreenHelper;
-import tech.mustache.ocr.com.anroid_ocr.util.SizeComparator;
 
 /**
  * Created by cooper on 08.05.2016.
@@ -43,7 +46,8 @@ public class CameraActivity extends AppCompatActivity implements View.OnClickLis
 
     private static final int REQUEST_CAMERA_CODE = 0;
 
-    private Button mRecordBtn;
+    private ImageButton mRecordBtn;
+    private boolean mIsRecording = false;
 
     private TextureView mCameraView;
     private TextureView.SurfaceTextureListener mSurfaceTextureListener = new TextureView.SurfaceTextureListener() {
@@ -98,15 +102,39 @@ public class CameraActivity extends AppCompatActivity implements View.OnClickLis
     private HandlerThread mBackGroundHandlerThread;
     private Handler mBackgroundHandler;
 
+    private CameraCaptureSession mPreviewCaptureSession;
+    private CameraCaptureSession mRecordSession;
+
+    private ImageReader mImageReader;
+    private final ImageReader.OnImageAvailableListener mOnImageAvailableListener = new ImageReader.OnImageAvailableListener() {
+        @Override
+        public void onImageAvailable(ImageReader reader) {
+            mBackgroundHandler.post(new ImageWorker(reader.acquireLatestImage()));
+        }
+    };
+
+    private class ImageWorker implements Runnable {
+
+        private final Image mImage;
+
+        public ImageWorker(Image mImage) {
+            this.mImage = mImage;
+            mImage.close();
+        }
+
+        @Override
+        public void run() {
+            System.out.println("");
+        }
+    }
+
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.camera_layout);
 
-        Context context = getApplicationContext();
-
         mCameraView = (TextureView) findViewById(R.id.cameraTextureView);
-        mRecordBtn = (Button) findViewById(R.id.recordBtn);
+        mRecordBtn = (ImageButton) findViewById(R.id.recordBtn);
         mRecordBtn.setOnClickListener(this);
     }
 
@@ -125,8 +153,11 @@ public class CameraActivity extends AppCompatActivity implements View.OnClickLis
 
     @Override
     protected void onPause() {
+        endRecord();
         closeCamera();
         stopBackgroundThread();
+        mIsRecording = false;
+        mRecordBtn.setImageResource(R.drawable.ic_rec);
         super.onPause();
     }
 
@@ -163,10 +194,28 @@ public class CameraActivity extends AppCompatActivity implements View.OnClickLis
     public void onClick(View v) {
         switch (v.getId()) {
             case R.id.recordBtn:
+                if (mIsRecording) {
+                    stopRecBtn();
+                } else {
+                    startRecBtn();
+                }
                 break;
             default:
                 break;
         }
+    }
+
+    private void startRecBtn() {
+        mIsRecording = true;
+        mRecordBtn.setImageResource(R.drawable.ic_stop);
+        startRecord();
+    }
+
+    private void stopRecBtn() {
+        mIsRecording = false;
+        mRecordBtn.setImageResource(R.drawable.ic_rec);
+        endRecord();
+        startPreview();
     }
 
     private void setupCamera(int width, int height) {
@@ -178,9 +227,11 @@ public class CameraActivity extends AppCompatActivity implements View.OnClickLis
                     StreamConfigurationMap map = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
 
                     // TODO change values
-                    width = 1080;
-                    height = 1920;
-                    mPreviewSize = ScreenHelper.chooseOptimalSize(map.getOutputSizes(SurfaceTexture.class), height, width);
+                    width = 1920;
+                    height = 1080;
+                    mPreviewSize = ScreenHelper.chooseOptimalSize(map.getOutputSizes(SurfaceTexture.class), width, height);
+                    mImageReader = ImageReader.newInstance(mPreviewSize.getWidth(), mPreviewSize.getHeight(), ImageFormat.YUV_420_888, 1);
+                    mImageReader.setOnImageAvailableListener(mOnImageAvailableListener, mBackgroundHandler);
                     mCameraId = cameraId;
                     return;
                 }
@@ -216,17 +267,17 @@ public class CameraActivity extends AppCompatActivity implements View.OnClickLis
         SurfaceTexture surfaceTexture = mCameraView.getSurfaceTexture();
         surfaceTexture.setDefaultBufferSize(mPreviewSize.getWidth(), mPreviewSize.getHeight());
         Surface previewSurface = new Surface(surfaceTexture);
-
         try {
-            mCaptureRequestBuilder = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_RECORD);
+            mCaptureRequestBuilder = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
             mCaptureRequestBuilder.addTarget(previewSurface);
 
-            mCameraDevice.createCaptureSession(Arrays.asList(previewSurface),
+            mCameraDevice.createCaptureSession(Arrays.asList(previewSurface, mImageReader.getSurface()),
                     new CameraCaptureSession.StateCallback() {
                         @Override
                         public void onConfigured(CameraCaptureSession session) {
+                            mPreviewCaptureSession = session;
                             try {
-                                session.setRepeatingRequest(mCaptureRequestBuilder.build(), null, mBackgroundHandler);
+                                mPreviewCaptureSession.setRepeatingRequest(mCaptureRequestBuilder.build(), null, mBackgroundHandler);
                             } catch (CameraAccessException e) {
                             }
                         }
@@ -240,6 +291,42 @@ public class CameraActivity extends AppCompatActivity implements View.OnClickLis
                     null);
         } catch (CameraAccessException e) {
         }
+    }
+
+    private void startRecord() {
+        SurfaceTexture surfaceTexture = mCameraView.getSurfaceTexture();
+        surfaceTexture.setDefaultBufferSize(mPreviewSize.getWidth(), mPreviewSize.getHeight());
+        Surface previewSurface = new Surface(surfaceTexture);
+        try {
+            mCaptureRequestBuilder = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_VIDEO_SNAPSHOT);
+            mCaptureRequestBuilder.addTarget(previewSurface);
+            mCaptureRequestBuilder.addTarget(mImageReader.getSurface());
+            mCaptureRequestBuilder.set(CaptureRequest.JPEG_ORIENTATION, 0);
+
+            mCameraDevice.createCaptureSession(Arrays.asList(previewSurface, mImageReader.getSurface()),
+                    new CameraCaptureSession.StateCallback() {
+                        @Override
+                        public void onConfigured(CameraCaptureSession session) {
+                            mRecordSession = session;
+                            try {
+                                mRecordSession.setRepeatingRequest(mCaptureRequestBuilder.build(), null, null);
+                            } catch (CameraAccessException e) {
+                            }
+                        }
+
+                        @Override
+                        public void onConfigureFailed(CameraCaptureSession session) {
+                            Toast.makeText(getApplicationContext(),
+                                    "Unable to setup camera preview", Toast.LENGTH_SHORT).show();
+                        }
+                    },
+                    null);
+        } catch (CameraAccessException e) {
+        }
+    }
+
+    private void endRecord() {
+        mRecordSession.close();
     }
 
     private void closeCamera() {
