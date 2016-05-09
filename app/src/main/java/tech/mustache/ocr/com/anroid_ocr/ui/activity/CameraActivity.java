@@ -139,7 +139,7 @@ public class CameraActivity extends AppCompatActivity implements View.OnClickLis
         mCameraView = (TextureView) findViewById(R.id.cameraTextureView);
         mRecordBtn = (ImageButton) findViewById(R.id.recordBtn);
         mRecordBtn.setOnClickListener(this);
-        mFocusView = (FocusView) findViewById(R.id.focus_view);
+        //mFocusView = (FocusView) findViewById(R.id.focus_view);
     }
 
     @Override
