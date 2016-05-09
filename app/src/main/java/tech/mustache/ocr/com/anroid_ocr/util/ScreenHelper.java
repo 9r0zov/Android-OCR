@@ -1,6 +1,8 @@
 package tech.mustache.ocr.com.anroid_ocr.util;
 
+import android.content.Context;
 import android.util.Size;
+import android.view.TextureView;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -25,6 +27,12 @@ public class ScreenHelper {
         }
         // TODO change
         return choices[0];
+    }
+
+    public static Size minFocusViewSize(Context context) {
+        int height = context.getResources().getDisplayMetrics().widthPixels / 10;
+        int width = context.getResources().getDisplayMetrics().heightPixels / 2;
+        return new Size(width, height);
     }
 
 }

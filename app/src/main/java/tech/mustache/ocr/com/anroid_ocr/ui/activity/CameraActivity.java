@@ -30,6 +30,7 @@ import android.view.Surface;
 import android.view.TextureView;
 import android.view.View;
 import android.widget.ImageButton;
+import android.widget.ImageView;
 import android.widget.Toast;
 
 import java.io.IOException;
@@ -37,6 +38,7 @@ import java.lang.reflect.Array;
 import java.util.Arrays;
 
 import tech.mustache.ocr.com.anroid_ocr.R;
+import tech.mustache.ocr.com.anroid_ocr.ui.focus.FocusView;
 import tech.mustache.ocr.com.anroid_ocr.util.ScreenHelper;
 
 /**
@@ -112,7 +114,6 @@ public class CameraActivity extends AppCompatActivity implements View.OnClickLis
             mBackgroundHandler.post(new ImageWorker(reader.acquireLatestImage()));
         }
     };
-
     private class ImageWorker implements Runnable {
 
         private final Image mImage;
@@ -128,6 +129,8 @@ public class CameraActivity extends AppCompatActivity implements View.OnClickLis
         }
     }
 
+    private FocusView mFocusView;
+
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -136,6 +139,7 @@ public class CameraActivity extends AppCompatActivity implements View.OnClickLis
         mCameraView = (TextureView) findViewById(R.id.cameraTextureView);
         mRecordBtn = (ImageButton) findViewById(R.id.recordBtn);
         mRecordBtn.setOnClickListener(this);
+        mFocusView = (FocusView) findViewById(R.id.focus_view);
     }
 
     @Override
