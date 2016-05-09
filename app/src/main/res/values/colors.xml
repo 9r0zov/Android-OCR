@@ -3,4 +3,11 @@
     <color name="colorPrimary">#3F51B5</color>
     <color name="colorPrimaryDark">#303F9F</color>
     <color name="colorAccent">#FF4081</color>
+
+    <color name="focusViewMask">#885b5b5b</color>
+    <color name="focusViewBorder">#fafafafa</color>
+    <color name="focusViewCorner">#fafafafa</color>
+
+    <color name="focusViewBorderOnDrag">#00ba16</color>
+    <color name="focusViewCornerOnDrag">#00ba16</color>
 </resources>
