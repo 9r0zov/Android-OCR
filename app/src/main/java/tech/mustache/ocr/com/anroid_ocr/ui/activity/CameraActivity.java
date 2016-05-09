@@ -1,9 +1,10 @@
 package tech.mustache.ocr.com.anroid_ocr.ui.activity;
 
 import android.Manifest;
-import android.content.Context;
+import android.app.Activity;
 import android.content.pm.PackageManager;
 import android.graphics.ImageFormat;
+import android.graphics.Rect;
 import android.graphics.SurfaceTexture;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCaptureSession;
@@ -11,11 +12,10 @@ import android.hardware.camera2.CameraCharacteristics;
 import android.hardware.camera2.CameraDevice;
 import android.hardware.camera2.CameraManager;
 import android.hardware.camera2.CaptureRequest;
-import android.hardware.camera2.TotalCaptureResult;
 import android.hardware.camera2.params.StreamConfigurationMap;
 import android.media.Image;
 import android.media.ImageReader;
-import android.media.MediaRecorder;
+import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -23,28 +23,27 @@ import android.os.HandlerThread;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.app.ActivityCompat;
-import android.support.v7.app.AppCompatActivity;
-import android.util.Range;
 import android.util.Size;
 import android.view.Surface;
 import android.view.TextureView;
 import android.view.View;
 import android.widget.ImageButton;
-import android.widget.ImageView;
+import android.widget.TextView;
 import android.widget.Toast;
 
-import java.io.IOException;
-import java.lang.reflect.Array;
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 
 import tech.mustache.ocr.com.anroid_ocr.R;
+import tech.mustache.ocr.com.anroid_ocr.ocr.TessAsyncEngine;
+import tech.mustache.ocr.com.anroid_ocr.ocr.TessEngine;
 import tech.mustache.ocr.com.anroid_ocr.ui.focus.FocusView;
 import tech.mustache.ocr.com.anroid_ocr.util.ScreenHelper;
 
 /**
  * Created by cooper on 08.05.2016.
  */
-public class CameraActivity extends AppCompatActivity implements View.OnClickListener {
+public class CameraActivity extends Activity implements View.OnClickListener {
 
     private static final int REQUEST_CAMERA_CODE = 0;
 
@@ -108,28 +107,32 @@ public class CameraActivity extends AppCompatActivity implements View.OnClickLis
     private CameraCaptureSession mRecordSession;
 
     private ImageReader mImageReader;
+    private Activity activity = this;
+    private Rect mFrameSize;
     private final ImageReader.OnImageAvailableListener mOnImageAvailableListener = new ImageReader.OnImageAvailableListener() {
+
         @Override
         public void onImageAvailable(ImageReader reader) {
-            mBackgroundHandler.post(new ImageWorker(reader.acquireLatestImage()));
+            try (Image mImage = reader.acquireNextImage()) {
+                if (frame % 60 == 0) {
+                    ByteBuffer buffer = mImage.getPlanes()[0].getBuffer();
+                    byte[] bytes = new byte[buffer.remaining()];
+                    buffer.get(bytes, 0, bytes.length);
+
+                    new TessAsyncEngine().executeOnExecutor(AsyncTask.SERIAL_EXECUTOR,
+                            activity,
+                            bytes,
+                            mFocusView.getmFocusView(),
+                            mImageReader.getWidth(),
+                            mImageReader.getHeight());
+                }
+            }
         }
     };
-    private class ImageWorker implements Runnable {
-
-        private final Image mImage;
-
-        public ImageWorker(Image mImage) {
-            this.mImage = mImage;
-            mImage.close();
-        }
-
-        @Override
-        public void run() {
-            System.out.println("");
-        }
-    }
 
     private FocusView mFocusView;
+    private TextView mResultText;
+    private static long frame = 0l;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -139,14 +142,15 @@ public class CameraActivity extends AppCompatActivity implements View.OnClickLis
         mCameraView = (TextureView) findViewById(R.id.cameraTextureView);
         mRecordBtn = (ImageButton) findViewById(R.id.recordBtn);
         mRecordBtn.setOnClickListener(this);
-        //mFocusView = (FocusView) findViewById(R.id.focus_view);
+        mFocusView = (FocusView) findViewById(R.id.focus_view);
+        mResultText = (TextView) findViewById(R.id.resultText);
     }
 
     @Override
     protected void onResume() {
         super.onResume();
         startBackGroundThread();
-
+        TessEngine.getInstance(getApplicationContext());
         if (mCameraView.isAvailable()) {
             setupCamera(mCameraView.getWidth(), mCameraView.getHeight());
             connectCamera();
@@ -162,6 +166,7 @@ public class CameraActivity extends AppCompatActivity implements View.OnClickLis
         stopBackgroundThread();
         mIsRecording = false;
         mRecordBtn.setImageResource(R.drawable.ic_rec);
+        TessEngine.destroy(getApplicationContext());
         super.onPause();
     }
 
@@ -236,6 +241,7 @@ public class CameraActivity extends AppCompatActivity implements View.OnClickLis
                     mPreviewSize = ScreenHelper.chooseOptimalSize(map.getOutputSizes(SurfaceTexture.class), width, height);
                     mImageReader = ImageReader.newInstance(mPreviewSize.getWidth(), mPreviewSize.getHeight(), ImageFormat.YUV_420_888, 1);
                     mImageReader.setOnImageAvailableListener(mOnImageAvailableListener, mBackgroundHandler);
+                    mFrameSize = new Rect(0, 0, mImageReader.getWidth(), mImageReader.getHeight());
                     mCameraId = cameraId;
                     return;
                 }
@@ -313,7 +319,15 @@ public class CameraActivity extends AppCompatActivity implements View.OnClickLis
                         public void onConfigured(CameraCaptureSession session) {
                             mRecordSession = session;
                             try {
-                                mRecordSession.setRepeatingRequest(mCaptureRequestBuilder.build(), null, null);
+                                mRecordSession.setRepeatingRequest(mCaptureRequestBuilder.build(),
+                                        new CameraCaptureSession.CaptureCallback() {
+                                            @Override
+                                            public void onCaptureStarted(CameraCaptureSession session, CaptureRequest request, long timestamp, long frameNumber) {
+                                                frame = frameNumber;
+                                                super.onCaptureStarted(session, request, timestamp, frameNumber);
+                                            }
+                                        },
+                                        null);
                             } catch (CameraAccessException e) {
                             }
                         }

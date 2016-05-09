@@ -4,7 +4,6 @@ import android.content.Context;
 import android.graphics.Point;
 import android.util.Size;
 import android.view.Display;
-import android.view.TextureView;
 import android.view.WindowManager;
 
 import java.util.ArrayList;

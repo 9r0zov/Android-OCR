@@ -23,4 +23,6 @@ dependencies {
     compile fileTree(dir: 'libs', include: ['*.jar'])
     testCompile 'junit:junit:4.12'
     compile 'com.android.support:appcompat-v7:23.3.0'
+    compile 'log4j:log4j:1.2.14'
+    compile 'com.rmtheis:tess-two:5.4.1'
 }

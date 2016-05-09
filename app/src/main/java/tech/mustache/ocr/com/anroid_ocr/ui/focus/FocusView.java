@@ -6,6 +6,8 @@ import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.Point;
 import android.graphics.Rect;
+import android.os.Build;
+import android.support.v7.view.ContextThemeWrapper;
 import android.util.AttributeSet;
 import android.view.MotionEvent;
 import android.view.View;
@@ -50,12 +52,20 @@ public class FocusView extends View {
         this.mPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
 
         Resources resources = getResources();
-
-        this.FRAME_COLOR = resources.getColor(R.color.focusViewBorder);
-        this.MASK_COLOR = resources.getColor(R.color.focusViewMask);
-        this.CORNERS_COLOR = resources.getColor(R.color.focusViewCorner);
-        this.FRAME_COLOR_ON_DRAG = resources.getColor(R.color.focusViewBorderOnDrag);
-        this.CORNERS_COLOR_ON_DRAG = resources.getColor(R.color.focusViewCornerOnDrag);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M){
+            Resources.Theme theme = new ContextThemeWrapper(context, R.style.AppTheme).getTheme();
+            this.FRAME_COLOR = resources.getColor(R.color.focusViewBorder, theme);
+            this.MASK_COLOR = resources.getColor(R.color.focusViewMask, theme);
+            this.CORNERS_COLOR = resources.getColor(R.color.focusViewCorner, theme);
+            this.FRAME_COLOR_ON_DRAG = resources.getColor(R.color.focusViewBorderOnDrag, theme);
+            this.CORNERS_COLOR_ON_DRAG = resources.getColor(R.color.focusViewCornerOnDrag, theme);
+        } else{
+            this.FRAME_COLOR = resources.getColor(R.color.focusViewBorder);
+            this.MASK_COLOR = resources.getColor(R.color.focusViewMask);
+            this.CORNERS_COLOR = resources.getColor(R.color.focusViewCorner);
+            this.FRAME_COLOR_ON_DRAG = resources.getColor(R.color.focusViewBorderOnDrag);
+            this.CORNERS_COLOR_ON_DRAG = resources.getColor(R.color.focusViewCornerOnDrag);
+        }
 
         this.setOnTouchListener(getOnTouchListener());
     }
@@ -274,5 +284,13 @@ public class FocusView extends View {
             return;
 
         mFocusView = new Rect(leftOffset, topOffset, leftOffset + newWidth, topOffset + newHeight);
+    }
+
+    public Rect getmFocusView() {
+        return mFocusView;
+    }
+
+    public void setmFocusView(Rect mFocusView) {
+        this.mFocusView = mFocusView;
     }
 }
