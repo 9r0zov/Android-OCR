@@ -239,6 +239,7 @@ public class CameraActivity extends Activity implements View.OnClickListener {
                     width = 1920;
                     height = 1080;
                     mPreviewSize = ScreenHelper.chooseOptimalSize(map.getOutputSizes(SurfaceTexture.class), width, height);
+                    // TODO here
                     mImageReader = ImageReader.newInstance(mPreviewSize.getWidth(), mPreviewSize.getHeight(), ImageFormat.YUV_420_888, 1);
                     mImageReader.setOnImageAvailableListener(mOnImageAvailableListener, mBackgroundHandler);
                     mFrameSize = new Rect(0, 0, mImageReader.getWidth(), mImageReader.getHeight());
@@ -311,6 +312,7 @@ public class CameraActivity extends Activity implements View.OnClickListener {
             mCaptureRequestBuilder = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_VIDEO_SNAPSHOT);
             mCaptureRequestBuilder.addTarget(previewSurface);
             mCaptureRequestBuilder.addTarget(mImageReader.getSurface());
+            // TODO here
             mCaptureRequestBuilder.set(CaptureRequest.JPEG_ORIENTATION, 0);
 
             mCameraDevice.createCaptureSession(Arrays.asList(previewSurface, mImageReader.getSurface()),
