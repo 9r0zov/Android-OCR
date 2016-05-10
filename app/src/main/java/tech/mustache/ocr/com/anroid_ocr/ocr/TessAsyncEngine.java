@@ -4,9 +4,11 @@ import android.app.Activity;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.ImageFormat;
+import android.graphics.Matrix;
 import android.graphics.Rect;
 import android.graphics.YuvImage;
 import android.os.AsyncTask;
+import android.widget.ImageView;
 import android.widget.TextView;
 
 import java.io.ByteArrayOutputStream;
@@ -19,6 +21,8 @@ public class TessAsyncEngine extends AsyncTask<Object, Void, String> {
     private Rect rect;
     private Activity context;
 
+    private Bitmap mBitmap;
+
     @Override
     protected String doInBackground(Object... params) {
         try {
@@ -28,21 +32,14 @@ public class TessAsyncEngine extends AsyncTask<Object, Void, String> {
             int width = (int) params[3];
             int height = (int) params[4];
 
-            Bitmap bitmap = null;
-            try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
-                YuvImage yuv = new YuvImage(bytes, ImageFormat.NV21, width, height, null);
-                Rect mFrameSize = new Rect(0, 0, width, height);
-                yuv.compressToJpeg(mFrameSize, 80, out);
+            int[] convertYUV420_nv21toRGB8888 = convertYUV420_NV21toRGB8888(bytes, width, height);
 
-                if (out != null) {
-                    byte[] bitmapBytes = out.toByteArray();
-                    bitmap = BitmapFactory.decodeByteArray(bitmapBytes, 0, bitmapBytes.length);
-                }
-            } catch (Exception ex) {
-                ex.printStackTrace();
-            }
+            Bitmap bitmap = Bitmap.createBitmap(convertYUV420_nv21toRGB8888, width, height, Bitmap.Config.ARGB_8888);
+            Matrix matrix = new Matrix();
+            matrix.postRotate(90);
+            mBitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, true);
 
-            return TessEngine.getInstance(context).detectText(bitmap, rect);
+            return TessEngine.getInstance(context).detectText(mBitmap, rect);
         } catch (Exception ex) {
             ex.printStackTrace();
         }
@@ -58,6 +55,29 @@ public class TessAsyncEngine extends AsyncTask<Object, Void, String> {
         TextView resultText = (TextView) ((Activity) context).findViewById(R.id.resultText);
         resultText.setText(result);
 
+        /*ImageView resultImage = (ImageView) ((Activity) context).findViewById(R.id.imageResult);
+        resultImage.setImageBitmap(mBitmap);*/
+
         super.onPostExecute(result);
+    }
+
+    /**
+     * Converts YUV420 NV21 to RGB8888
+     *
+     * @param data byte array on YUV420 NV21 format.
+     * @param width pixels width
+     * @param height pixels height
+     * @return a RGB8888 pixels int array. Where each int is a pixels ARGB.
+     */
+    public static int[] convertYUV420_NV21toRGB8888(byte [] data, int width, int height) {
+        int p;
+        int size = width*height;
+        int[] pixels = new int[size];
+        for(int i = 0; i < size; i++) {
+            p = data[i] & 0xFF;
+            pixels[i] = 0xff000000 | p<<16 | p<<8 | p;
+        }
+
+        return pixels;
     }
 }

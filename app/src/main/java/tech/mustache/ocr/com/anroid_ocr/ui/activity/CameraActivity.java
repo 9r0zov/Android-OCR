@@ -32,6 +32,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Arrays;
 
 import tech.mustache.ocr.com.anroid_ocr.R;
@@ -114,7 +115,7 @@ public class CameraActivity extends Activity implements View.OnClickListener {
         @Override
         public void onImageAvailable(ImageReader reader) {
             try (Image mImage = reader.acquireNextImage()) {
-                if (frame % 60 == 0) {
+                if (frame % 30 == 0) {
                     ByteBuffer buffer = mImage.getPlanes()[0].getBuffer();
                     byte[] bytes = new byte[buffer.remaining()];
                     buffer.get(bytes, 0, bytes.length);
@@ -312,41 +313,27 @@ public class CameraActivity extends Activity implements View.OnClickListener {
             mCaptureRequestBuilder = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_VIDEO_SNAPSHOT);
             mCaptureRequestBuilder.addTarget(previewSurface);
             mCaptureRequestBuilder.addTarget(mImageReader.getSurface());
-            // TODO here
-            mCaptureRequestBuilder.set(CaptureRequest.JPEG_ORIENTATION, 0);
-
-            mCameraDevice.createCaptureSession(Arrays.asList(previewSurface, mImageReader.getSurface()),
-                    new CameraCaptureSession.StateCallback() {
-                        @Override
-                        public void onConfigured(CameraCaptureSession session) {
-                            mRecordSession = session;
-                            try {
-                                mRecordSession.setRepeatingRequest(mCaptureRequestBuilder.build(),
-                                        new CameraCaptureSession.CaptureCallback() {
-                                            @Override
-                                            public void onCaptureStarted(CameraCaptureSession session, CaptureRequest request, long timestamp, long frameNumber) {
-                                                frame = frameNumber;
-                                                super.onCaptureStarted(session, request, timestamp, frameNumber);
-                                            }
-                                        },
-                                        null);
-                            } catch (CameraAccessException e) {
+            mCaptureRequestBuilder.set(CaptureRequest.JPEG_ORIENTATION, 90);
+            try {
+                mPreviewCaptureSession.setRepeatingRequest(mCaptureRequestBuilder.build(),
+                        new CameraCaptureSession.CaptureCallback() {
+                            @Override
+                            public void onCaptureStarted(CameraCaptureSession session, CaptureRequest request, long timestamp, long frameNumber) {
+                                frame = frameNumber;
+                                super.onCaptureStarted(session, request, timestamp, frameNumber);
                             }
-                        }
-
-                        @Override
-                        public void onConfigureFailed(CameraCaptureSession session) {
-                            Toast.makeText(getApplicationContext(),
-                                    "Unable to setup camera preview", Toast.LENGTH_SHORT).show();
-                        }
-                    },
-                    null);
+                        },
+                        null);
+            } catch (CameraAccessException e) {
+            }
         } catch (CameraAccessException e) {
         }
     }
 
     private void endRecord() {
-        mRecordSession.close();
+        if (mRecordSession != null) {
+            mRecordSession.close();
+        }
     }
 
     private void closeCamera() {
