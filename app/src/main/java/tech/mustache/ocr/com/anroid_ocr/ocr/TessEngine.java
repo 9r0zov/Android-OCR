@@ -49,7 +49,6 @@ public class TessEngine {
 
     public String detectText(Bitmap bitmap, Rect rect) {
         try {
-            tessBaseAPI.clear();
             tessBaseAPI.setImage(bitmap);
             tessBaseAPI.setRectangle(rect);
             return tessBaseAPI.getUTF8Text();

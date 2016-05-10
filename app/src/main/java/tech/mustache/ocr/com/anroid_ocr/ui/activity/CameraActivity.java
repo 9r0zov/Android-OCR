@@ -35,6 +35,8 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import tech.mustache.ocr.com.anroid_ocr.R;
 import tech.mustache.ocr.com.anroid_ocr.ocr.TessAsyncEngine;
@@ -118,7 +120,7 @@ public class CameraActivity extends Activity implements View.OnClickListener {
         @Override
         public void onImageAvailable(ImageReader reader) {
             try (Image mImage = reader.acquireNextImage()) {
-                if (frame % 60 == 0) {
+                if (frame % 75 == 0) {
                     ByteBuffer buffer = mImage.getPlanes()[0].getBuffer();
                     byte[] bytes = new byte[buffer.remaining()];
                     buffer.get(bytes, 0, bytes.length);
@@ -137,7 +139,6 @@ public class CameraActivity extends Activity implements View.OnClickListener {
     private FocusView mFocusView;
     private TextView mResultText;
     private static long frame = 0l;
-    private static long time = 0l;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -321,19 +322,15 @@ public class CameraActivity extends Activity implements View.OnClickListener {
             mCaptureRequestBuilder.addTarget(previewSurface);
             mCaptureRequestBuilder.addTarget(mImageReader.getSurface());
             mCaptureRequestBuilder.set(CaptureRequest.JPEG_ORIENTATION, 90);
-            try {
-                mPreviewCaptureSession.setRepeatingRequest(mCaptureRequestBuilder.build(),
-                        new CameraCaptureSession.CaptureCallback() {
-                            @Override
-                            public void onCaptureStarted(CameraCaptureSession session, CaptureRequest request, long timestamp, long frameNumber) {
-                                frame = frameNumber;
-                                super.onCaptureStarted(session, request, timestamp, frameNumber);
-                                fps.setText("FPS: ".concat(String.valueOf(frame)));
-                            }
-                        },
-                        null);
-            } catch (CameraAccessException e) {
-            }
+            mPreviewCaptureSession.setRepeatingRequest(mCaptureRequestBuilder.build(),
+                    new CameraCaptureSession.CaptureCallback() {
+                        @Override
+                        public void onCaptureStarted(CameraCaptureSession session, CaptureRequest request, long timestamp, long frameNumber) {
+                            frame = frameNumber;
+                            super.onCaptureStarted(session, request, timestamp, frameNumber);
+                        }
+                    },
+                    null);
         } catch (CameraAccessException e) {
         }
     }
@@ -342,6 +339,7 @@ public class CameraActivity extends Activity implements View.OnClickListener {
         if (mPreviewCaptureSession != null) {
             mPreviewCaptureSession.close();
         }
+        System.gc();
     }
 
     private void closeCamera() {
