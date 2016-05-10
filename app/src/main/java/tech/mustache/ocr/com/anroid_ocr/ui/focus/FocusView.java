@@ -4,11 +4,12 @@ import android.content.Context;
 import android.content.res.Resources;
 import android.graphics.Canvas;
 import android.graphics.Paint;
+import android.graphics.Point;
 import android.graphics.Rect;
+import android.os.Build;
+import android.support.v7.view.ContextThemeWrapper;
 import android.util.AttributeSet;
-import android.util.Size;
 import android.view.MotionEvent;
-import android.view.TextureView;
 import android.view.View;
 
 import tech.mustache.ocr.com.anroid_ocr.R;
@@ -27,15 +28,17 @@ public class FocusView extends View {
     private final int MASK_COLOR;
     private final int FRAME_COLOR;
     private final int CORNERS_COLOR;
+
     private final int FRAME_COLOR_ON_DRAG;
     private final int CORNERS_COLOR_ON_DRAG;
 
     private final Paint mPaint;
-
-    private final Size mDrawAreaSize;
+    private final Point mDrawAreaSize;
 
     private Rect mFocusView;
     private OnTouchListener mOnTouchListener;
+
+    private boolean mInMove;
 
     public FocusView(Context context, AttributeSet attrs) {
         super(context, attrs);
@@ -43,18 +46,26 @@ public class FocusView extends View {
 
         this.mDrawAreaSize = ScreenHelper.minFocusViewSize(context);
 
-        this.MIN_BOX_HEIGHT = mDrawAreaSize.getHeight();
-        this.MIN_BOX_WIDTH = mDrawAreaSize.getWidth();
+        this.MIN_BOX_HEIGHT = mDrawAreaSize.y / 10;
+        this.MIN_BOX_WIDTH = mDrawAreaSize.x / 3;
 
         this.mPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
 
         Resources resources = getResources();
-
-        this.FRAME_COLOR = resources.getColor(R.color.focusViewBorder);
-        this.MASK_COLOR = resources.getColor(R.color.focusViewMask);
-        this.CORNERS_COLOR = resources.getColor(R.color.focusViewCorner);
-        this.FRAME_COLOR_ON_DRAG = resources.getColor(R.color.focusViewBorderOnDrag);
-        this.CORNERS_COLOR_ON_DRAG = resources.getColor(R.color.focusViewCornerOnDrag);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M){
+            Resources.Theme theme = new ContextThemeWrapper(context, R.style.AppTheme).getTheme();
+            this.FRAME_COLOR = resources.getColor(R.color.focusViewBorder, theme);
+            this.MASK_COLOR = resources.getColor(R.color.focusViewMask, theme);
+            this.CORNERS_COLOR = resources.getColor(R.color.focusViewCorner, theme);
+            this.FRAME_COLOR_ON_DRAG = resources.getColor(R.color.focusViewBorderOnDrag, theme);
+            this.CORNERS_COLOR_ON_DRAG = resources.getColor(R.color.focusViewCornerOnDrag, theme);
+        } else{
+            this.FRAME_COLOR = resources.getColor(R.color.focusViewBorder);
+            this.MASK_COLOR = resources.getColor(R.color.focusViewMask);
+            this.CORNERS_COLOR = resources.getColor(R.color.focusViewCorner);
+            this.FRAME_COLOR_ON_DRAG = resources.getColor(R.color.focusViewBorderOnDrag);
+            this.CORNERS_COLOR_ON_DRAG = resources.getColor(R.color.focusViewCornerOnDrag);
+        }
 
         this.setOnTouchListener(getOnTouchListener());
     }
@@ -74,17 +85,27 @@ public class FocusView extends View {
 
         mPaint.setAlpha(0);
         mPaint.setStyle(Paint.Style.FILL);
-        mPaint.setColor(FRAME_COLOR);
+        if (mInMove) {
+            mPaint.setColor(FRAME_COLOR_ON_DRAG);
+        } else {
+            mPaint.setColor(FRAME_COLOR);
+        }
         canvas.drawRect(frame.left, frame.top, frame.right + 1, frame.top + 2, mPaint);
         canvas.drawRect(frame.left, frame.top + 2, frame.left + 2, frame.bottom - 1, mPaint);
         canvas.drawRect(frame.right - 1, frame.top, frame.right + 1, frame.bottom - 1, mPaint);
         canvas.drawRect(frame.left, frame.bottom - 1, frame.right + 1, frame.bottom + 1, mPaint);
 
-        mPaint.setColor(CORNERS_COLOR);
-        canvas.drawCircle(frame.left - 32, frame.top - 32, 32, mPaint);
-        canvas.drawCircle(frame.right + 32, frame.top - 32, 32, mPaint);
-        canvas.drawCircle(frame.left - 32, frame.bottom + 32, 32, mPaint);
-        canvas.drawCircle(frame.right + 32, frame.bottom + 32, 32, mPaint);
+        if (mInMove) {
+            mPaint.setColor(CORNERS_COLOR_ON_DRAG);
+        } else {
+            mPaint.setColor(CORNERS_COLOR);
+        }
+        int cornerSize = 30;
+        int cornerPadding = 5;
+        canvas.drawCircle(frame.left - cornerPadding, frame.top - cornerPadding, cornerSize, mPaint);
+        canvas.drawCircle(frame.right + cornerPadding, frame.top - cornerPadding, cornerSize, mPaint);
+        canvas.drawCircle(frame.left - cornerPadding, frame.bottom + cornerPadding, cornerSize, mPaint);
+        canvas.drawCircle(frame.right + cornerPadding, frame.bottom + cornerPadding, cornerSize, mPaint);
     }
 
     private OnTouchListener getOnTouchListener() {
@@ -102,22 +123,28 @@ public class FocusView extends View {
 
             @Override
             public boolean onTouch(View v, MotionEvent event) {
+                Rect rect = getFocusViewRect();
                 switch (event.getAction()) {
                     case MotionEvent.ACTION_DOWN:
                         lastX = -1;
                         lastY = -1;
+                        mInMove = false;
                         return true;
                     case MotionEvent.ACTION_UP:
                         lastX = -1;
                         lastY = -1;
+                        if (mInMove) {
+                            mInMove = false;
+                            v.invalidate();
+                        }
                         return true;
                     case MotionEvent.ACTION_MOVE:
+                        mInMove = true;
                         int currentX = (int) event.getX();
                         int currentY = (int) event.getY();
                         try {
-                            Rect rect = getFocusViewRect();
-                            final int BUFFER = 50;
-                            final int BIG_BUFFER = 60;
+                            final int BUFFER = 75;
+                            final int BIG_BUFFER = 90;
                             if (lastX >= 0) {
                                 if (((currentX >= rect.left - BIG_BUFFER
                                         && currentX <= rect.left + BIG_BUFFER)
@@ -220,8 +247,8 @@ public class FocusView extends View {
 
     private Rect getFocusViewRect() {
         if (mFocusView == null) {
-            int width = mDrawAreaSize.getWidth() * 6 / 7;
-            int height = mDrawAreaSize.getHeight() / 9;
+            int width = mDrawAreaSize.x * 6 / 8;
+            int height = mDrawAreaSize.y / 9;
 
             width = width == 0
                     ? MIN_BOX_WIDTH
@@ -231,8 +258,8 @@ public class FocusView extends View {
                     ? MIN_BOX_HEIGHT
                     : height < MIN_BOX_HEIGHT ? MIN_BOX_HEIGHT : height;
 
-            int left = (mDrawAreaSize.getWidth() - width) / 2;
-            int top = (mDrawAreaSize.getWidth() - height) / 2;
+            int left = (mDrawAreaSize.x - width) / 2;
+            int top = (mDrawAreaSize.y - height) / 2;
             int right = left + width;
             int bottom = top + height;
 
@@ -242,20 +269,28 @@ public class FocusView extends View {
     }
 
     private void updateBoxRect(int dW, int dH) {
-        int newWidth = (mFocusView.width() + dW > mDrawAreaSize.getWidth() - 4 || mFocusView.width() + dW < MIN_BOX_WIDTH)
+        int newWidth = (mFocusView.width() + dW > mDrawAreaSize.x - 4 || mFocusView.width() + dW < MIN_BOX_WIDTH)
                 ? 0
                 : mFocusView.width() + dW;
 
-        int newHeight = (mFocusView.height() + dH > mDrawAreaSize.getHeight() - 4 || mFocusView.height() + dH < MIN_BOX_HEIGHT)
+        int newHeight = (mFocusView.height() + dH > mDrawAreaSize.y - 4 || mFocusView.height() + dH < MIN_BOX_HEIGHT)
                 ? 0
                 : mFocusView.height() + dH;
 
-        int leftOffset = (mDrawAreaSize.getWidth() - newWidth) / 2;
-        int topOffset = (mDrawAreaSize.getHeight() - newHeight) / 2;
+        int leftOffset = (mDrawAreaSize.x - newWidth) / 2;
+        int topOffset = (mDrawAreaSize.y - newHeight) / 2;
 
         if (newWidth < MIN_BOX_WIDTH || newHeight < MIN_BOX_HEIGHT)
             return;
 
         mFocusView = new Rect(leftOffset, topOffset, leftOffset + newWidth, topOffset + newHeight);
+    }
+
+    public Rect getmFocusView() {
+        return mFocusView;
+    }
+
+    public void setmFocusView(Rect mFocusView) {
+        this.mFocusView = mFocusView;
     }
 }

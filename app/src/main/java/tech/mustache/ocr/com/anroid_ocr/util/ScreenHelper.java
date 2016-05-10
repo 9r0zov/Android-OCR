@@ -1,8 +1,10 @@
 package tech.mustache.ocr.com.anroid_ocr.util;
 
 import android.content.Context;
+import android.graphics.Point;
 import android.util.Size;
-import android.view.TextureView;
+import android.view.Display;
+import android.view.WindowManager;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -29,10 +31,12 @@ public class ScreenHelper {
         return choices[0];
     }
 
-    public static Size minFocusViewSize(Context context) {
-        int height = context.getResources().getDisplayMetrics().widthPixels / 10;
-        int width = context.getResources().getDisplayMetrics().heightPixels / 2;
-        return new Size(width, height);
+    public static Point minFocusViewSize(Context context) {
+        WindowManager windowManager = (WindowManager) context.getSystemService(Context.WINDOW_SERVICE);
+        Display display = windowManager.getDefaultDisplay();
+        Point size = new Point();
+        display.getRealSize(size);
+        return size;
     }
 
 }
