@@ -52,7 +52,6 @@ public class CameraActivity extends Activity implements View.OnClickListener {
     private static final int REQUEST_CAMERA_CODE = 0;
 
     private ImageButton mRecordBtn;
-    private TextView fps;
     private boolean mIsRecording = false;
 
     private TextureView mCameraView;
@@ -114,7 +113,7 @@ public class CameraActivity extends Activity implements View.OnClickListener {
     private ImageReader mImageReader;
     private Activity activity = this;
     private Rect mFrameSize;
-    private List<AsyncTask<Object, Void, String>> tasks = new ArrayList<>();
+
     private final ImageReader.OnImageAvailableListener mOnImageAvailableListener = new ImageReader.OnImageAvailableListener() {
 
         @Override
