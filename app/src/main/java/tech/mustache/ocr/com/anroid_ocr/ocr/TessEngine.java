@@ -33,6 +33,8 @@ public class TessEngine {
 
     public void destroyEngine() {
         tessBaseAPI.end();
+        tessBaseAPI = null;
+        tessEngine = null;
         System.gc();
     }
 

@@ -150,7 +150,6 @@ public class CameraActivity extends Activity implements View.OnClickListener {
         mFocusView = (FocusView) findViewById(R.id.focus_view);
         mResultText = (TextView) findViewById(R.id.resultText);
         mResultText.setText("");
-        fps = (TextView) findViewById(R.id.fps);
     }
 
     @Override
@@ -168,14 +167,13 @@ public class CameraActivity extends Activity implements View.OnClickListener {
 
     @Override
     protected void onPause() {
-        //TessEngine.getInstance(getApplicationContext()).stopEngine();
         mResultText.setText("");
-        TessEngine.destroy(getApplicationContext());
         endRecord();
         closeCamera();
         stopBackgroundThread();
         mIsRecording = false;
         mRecordBtn.setImageResource(R.drawable.ic_rec);
+        TessEngine.destroy(getApplicationContext());
         super.onPause();
     }
 
