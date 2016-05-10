@@ -55,9 +55,6 @@ public class TessAsyncEngine extends AsyncTask<Object, Void, String> {
         TextView resultText = (TextView) ((Activity) context).findViewById(R.id.resultText);
         resultText.setText(result);
 
-        /*ImageView resultImage = (ImageView) ((Activity) context).findViewById(R.id.imageResult);
-        resultImage.setImageBitmap(mBitmap);*/
-
         super.onPostExecute(result);
     }
 

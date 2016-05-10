@@ -34,6 +34,7 @@ import android.widget.Toast;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 import tech.mustache.ocr.com.anroid_ocr.R;
 import tech.mustache.ocr.com.anroid_ocr.ocr.TessAsyncEngine;
@@ -49,6 +50,7 @@ public class CameraActivity extends Activity implements View.OnClickListener {
     private static final int REQUEST_CAMERA_CODE = 0;
 
     private ImageButton mRecordBtn;
+    private TextView fps;
     private boolean mIsRecording = false;
 
     private TextureView mCameraView;
@@ -110,12 +112,13 @@ public class CameraActivity extends Activity implements View.OnClickListener {
     private ImageReader mImageReader;
     private Activity activity = this;
     private Rect mFrameSize;
+    private List<AsyncTask<Object, Void, String>> tasks = new ArrayList<>();
     private final ImageReader.OnImageAvailableListener mOnImageAvailableListener = new ImageReader.OnImageAvailableListener() {
 
         @Override
         public void onImageAvailable(ImageReader reader) {
             try (Image mImage = reader.acquireNextImage()) {
-                if (frame % 30 == 0) {
+                if (frame % 60 == 0) {
                     ByteBuffer buffer = mImage.getPlanes()[0].getBuffer();
                     byte[] bytes = new byte[buffer.remaining()];
                     buffer.get(bytes, 0, bytes.length);
@@ -134,6 +137,7 @@ public class CameraActivity extends Activity implements View.OnClickListener {
     private FocusView mFocusView;
     private TextView mResultText;
     private static long frame = 0l;
+    private static long time = 0l;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -145,6 +149,8 @@ public class CameraActivity extends Activity implements View.OnClickListener {
         mRecordBtn.setOnClickListener(this);
         mFocusView = (FocusView) findViewById(R.id.focus_view);
         mResultText = (TextView) findViewById(R.id.resultText);
+        mResultText.setText("");
+        fps = (TextView) findViewById(R.id.fps);
     }
 
     @Override
@@ -162,12 +168,14 @@ public class CameraActivity extends Activity implements View.OnClickListener {
 
     @Override
     protected void onPause() {
+        //TessEngine.getInstance(getApplicationContext()).stopEngine();
+        mResultText.setText("");
+        TessEngine.destroy(getApplicationContext());
         endRecord();
         closeCamera();
         stopBackgroundThread();
         mIsRecording = false;
         mRecordBtn.setImageResource(R.drawable.ic_rec);
-        TessEngine.destroy(getApplicationContext());
         super.onPause();
     }
 
@@ -240,7 +248,6 @@ public class CameraActivity extends Activity implements View.OnClickListener {
                     width = 1920;
                     height = 1080;
                     mPreviewSize = ScreenHelper.chooseOptimalSize(map.getOutputSizes(SurfaceTexture.class), width, height);
-                    // TODO here
                     mImageReader = ImageReader.newInstance(mPreviewSize.getWidth(), mPreviewSize.getHeight(), ImageFormat.YUV_420_888, 1);
                     mImageReader.setOnImageAvailableListener(mOnImageAvailableListener, mBackgroundHandler);
                     mFrameSize = new Rect(0, 0, mImageReader.getWidth(), mImageReader.getHeight());
@@ -321,6 +328,7 @@ public class CameraActivity extends Activity implements View.OnClickListener {
                             public void onCaptureStarted(CameraCaptureSession session, CaptureRequest request, long timestamp, long frameNumber) {
                                 frame = frameNumber;
                                 super.onCaptureStarted(session, request, timestamp, frameNumber);
+                                fps.setText("FPS: ".concat(String.valueOf(frame)));
                             }
                         },
                         null);
@@ -331,8 +339,8 @@ public class CameraActivity extends Activity implements View.OnClickListener {
     }
 
     private void endRecord() {
-        if (mRecordSession != null) {
-            mRecordSession.close();
+        if (mPreviewCaptureSession != null) {
+            mPreviewCaptureSession.close();
         }
     }
 

@@ -40,8 +40,10 @@
             android:layout_height="wrap_content" />
     </LinearLayout>
 
-    <ImageView
-        android:id="@+id/imageResult"
+    <TextView
+        android:id="@+id/fps"
+        android:textSize="@dimen/default_text_size"
+        android:textColor="@color/focusViewBorderOnDrag"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content" />
 

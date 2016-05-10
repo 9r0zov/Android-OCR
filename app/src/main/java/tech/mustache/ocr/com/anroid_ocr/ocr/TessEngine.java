@@ -24,6 +24,7 @@ public class TessEngine {
         tessBaseAPI.setVariable(TessBaseAPI.VAR_CHAR_WHITELIST, "qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM");
         tessBaseAPI.setVariable(TessBaseAPI.VAR_CHAR_BLACKLIST, "1234567890@#$%^&()_+=|\\{}[]:\";<>/~`");
         tessBaseAPI.setPageSegMode(TessBaseAPI.OEM_DEFAULT);
+        tessBaseAPI.setPageSegMode(TessBaseAPI.PageSegMode.PSM_SINGLE_LINE);
     }
 
     public static void destroy(Context context) {
@@ -35,6 +36,10 @@ public class TessEngine {
         System.gc();
     }
 
+    public void stopEngine() {
+        tessBaseAPI.stop();
+    }
+
     public static synchronized TessEngine getInstance(Context context) {
         if (tessEngine == null) {
             tessEngine = new TessEngine(context);
@@ -44,6 +49,7 @@ public class TessEngine {
 
     public String detectText(Bitmap bitmap, Rect rect) {
         try {
+            tessBaseAPI.clear();
             tessBaseAPI.setImage(bitmap);
             tessBaseAPI.setRectangle(rect);
             return tessBaseAPI.getUTF8Text();
