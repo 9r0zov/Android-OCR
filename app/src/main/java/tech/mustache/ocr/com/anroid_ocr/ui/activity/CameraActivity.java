@@ -32,11 +32,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
-import java.util.Timer;
-import java.util.TimerTask;
 
 import tech.mustache.ocr.com.anroid_ocr.R;
 import tech.mustache.ocr.com.anroid_ocr.ocr.TessAsyncEngine;
@@ -108,17 +104,16 @@ public class CameraActivity extends Activity implements View.OnClickListener {
     private Handler mBackgroundHandler;
 
     private CameraCaptureSession mPreviewCaptureSession;
-    private CameraCaptureSession mRecordSession;
 
     private ImageReader mImageReader;
     private Activity activity = this;
-    private Rect mFrameSize;
 
     private final ImageReader.OnImageAvailableListener mOnImageAvailableListener = new ImageReader.OnImageAvailableListener() {
 
         @Override
         public void onImageAvailable(ImageReader reader) {
             try (Image mImage = reader.acquireNextImage()) {
+                boolean free = TessEngine.getInstance(getApplicationContext()).isFree();
                 if (frame % 75 == 0) {
                     ByteBuffer buffer = mImage.getPlanes()[0].getBuffer();
                     byte[] bytes = new byte[buffer.remaining()];
@@ -248,7 +243,6 @@ public class CameraActivity extends Activity implements View.OnClickListener {
                     mPreviewSize = ScreenHelper.chooseOptimalSize(map.getOutputSizes(SurfaceTexture.class), width, height);
                     mImageReader = ImageReader.newInstance(mPreviewSize.getWidth(), mPreviewSize.getHeight(), ImageFormat.YUV_420_888, 1);
                     mImageReader.setOnImageAvailableListener(mOnImageAvailableListener, mBackgroundHandler);
-                    mFrameSize = new Rect(0, 0, mImageReader.getWidth(), mImageReader.getHeight());
                     mCameraId = cameraId;
                     return;
                 }

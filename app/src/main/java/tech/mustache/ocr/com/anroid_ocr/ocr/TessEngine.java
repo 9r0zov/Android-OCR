@@ -15,7 +15,10 @@ public class TessEngine {
     private TessBaseAPI tessBaseAPI;
     private String path;
 
+    private boolean free = true;
+
     private TessEngine(Context context){
+        setFree(false);
         TessDataManager.initTessTrainedData(context);
         this.tessBaseAPI = new TessBaseAPI();
         this.path = TessDataManager.getTesseractFolder();
@@ -24,7 +27,7 @@ public class TessEngine {
         tessBaseAPI.setVariable(TessBaseAPI.VAR_CHAR_WHITELIST, "qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM");
         tessBaseAPI.setVariable(TessBaseAPI.VAR_CHAR_BLACKLIST, "1234567890@#$%^&()_+=|\\{}[]:\";<>/~`");
         tessBaseAPI.setPageSegMode(TessBaseAPI.OEM_DEFAULT);
-        tessBaseAPI.setPageSegMode(TessBaseAPI.PageSegMode.PSM_SINGLE_LINE);
+        setFree(true);
     }
 
     public static void destroy(Context context) {
@@ -35,6 +38,7 @@ public class TessEngine {
         tessBaseAPI.end();
         tessBaseAPI = null;
         tessEngine = null;
+        setFree(true);
         System.gc();
     }
 
@@ -50,13 +54,25 @@ public class TessEngine {
     }
 
     public String detectText(Bitmap bitmap, Rect rect) {
+        setFree(false);
         try {
             tessBaseAPI.setImage(bitmap);
             tessBaseAPI.setRectangle(rect);
             return tessBaseAPI.getUTF8Text();
         } catch (Exception e) {
             e.printStackTrace();
+        } finally {
+            bitmap.recycle();
+            setFree(true);
         }
         return "";
+    }
+
+    public boolean isFree() {
+        return free;
+    }
+
+    public void setFree(boolean free) {
+        this.free = free;
     }
 }
